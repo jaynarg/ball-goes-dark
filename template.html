@@ -286,6 +286,12 @@
 <script>
 const DATA = /*__DATA__*/;
 const TEAMS = DATA.teams;
+
+/* Declared up here on purpose: the Golden Boot modal reads it, and that block runs
+   before the masthead is filled in. A `const` further down puts it in the temporal
+   dead zone and takes the whole script with it. */
+const asOf = new Date(DATA.through + 'T12:00:00Z')
+  .toLocaleDateString('en-US',{month:'long',day:'numeric',timeZone:'UTC'});
 const PHI = (1+Math.sqrt(5))/2;
 const R = 1.0;
 
@@ -845,8 +851,6 @@ document.getElementById('bootBtn').addEventListener('click',openBoot);
 document.getElementById('bootClose').addEventListener('click',closeBoot);
 scrim.addEventListener('click',closeBoot);
 
-const asOf = new Date(DATA.through + 'T12:00:00Z')
-  .toLocaleDateString('en-US',{month:'long',day:'numeric',timeZone:'UTC'});
 document.getElementById('through').textContent = 'through ' + asOf;
 
 const WORDS=['None','One','Two','Three','Four','Five','Six','Seven','Eight'];
