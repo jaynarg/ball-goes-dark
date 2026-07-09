@@ -9,7 +9,7 @@ Commit index.html and Vercel redeploys. No Node, no npm, no build step.
 
 Only the standard library is used.
 """
-import json, urllib.request, pathlib, sys, collections
+import json, urllib.request, pathlib, sys, collections, datetime
 
 HERE = pathlib.Path(__file__).parent
 SRC  = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
@@ -244,7 +244,14 @@ n_pent = sum(1 for d in teams.values() if d['panel'] and d['winner'])
 assert n_panel == 42, f'{n_panel} panels, need 42'
 assert n_pent == 12, f'{n_pent} pentagon teams, need 12'
 
-out = {'generated':'2026-07-08','rank_release':'2026-06-11',
+# "through <date>" is the last match actually played, not today: openfootball is
+# hand-maintained and can lag a result by up to a day. Claiming a date the data
+# does not cover would be the one lie this page tells.
+last_played = max(m['date'] for m in M if 'score' in m)
+
+out = {'generated': datetime.date.today().isoformat(),
+       'through': last_played,
+       'rank_release':'2026-06-11',
        'boot':boot,
        'teams':[teams[t] for t in sorted(teams)]}
 
@@ -273,6 +280,7 @@ for t in out["teams"]:
 lit = [t["name"] for t in out["teams"] if t["lit"]]
 print(f"  {goals} goals = {named} named + {og} own goals  [ok]")
 print(f"  golden boot: {out['boot'][0]['n']} ({out['boot'][0]['g']})")
+print(f"  through: {last_played}  (last match with a score)")
 print(f"  lit panels: {len(lit)} -> {', '.join(lit)}")
 print(f"  ball: {n_panel} panels = {n_pent} pentagons (group winners) + {n_panel-n_pent} hexagons")
 print(f"  no panel: {', '.join(sorted(NO_PANEL))}")
