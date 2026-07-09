@@ -300,9 +300,16 @@ const colorFor = t => STAGE_COL[t.stage];
    sequence, so 48 cells can only ever be irregular. Forty-two is, and it is the
    familiar shape: 12 pentagons + 30 hexagons.
 
-   Construction: subdivide an icosahedron once. Its 42 vertices — 12 originals
-   plus 30 edge midpoints — are the panel centers. A spherical Voronoi over them
-   yields a pentagon at each original vertex and a hexagon at each midpoint.
+   Panels are built as exact spherical polygons. Subdivide an icosahedron once:
+   its 42 vertices (12 originals, 30 edge midpoints) are the panel centers, and
+   its 80 faces are the Delaunay triangulation of those centers. The corners of
+   each Voronoi cell are the circumcenters of the faces touching its center —
+   the points equidistant from three panel centers. Sort them around the center,
+   fan-triangulate, subdivide onto the sphere.
+
+   Bucketing a fine mesh by nearest-seed instead leaves a sawtooth on every edge
+   the same size as the seam, which is what makes such a ball look amorphous.
+
    The 12 pentagons go to the 12 group winners. */
 const ICO_V = [[-1,PHI,0],[1,PHI,0],[-1,-PHI,0],[1,-PHI,0],[0,-1,PHI],[0,1,PHI],
                [0,-1,-PHI],[0,1,-PHI],[PHI,0,-1],[PHI,0,1],[-PHI,0,-1],[-PHI,0,1]];
@@ -310,18 +317,46 @@ const ICO_F = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,
                [10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],
                [2,4,11],[6,2,10],[8,6,7],[9,8,1]];
 
-const pentSeeds = ICO_V.map(v=>new THREE.Vector3(...v).normalize());
-const edges = new Set();
-for(const [a,b,c] of ICO_F)
-  for(const [p,q] of [[a,b],[b,c],[c,a]]) edges.add([p,q].sort((x,y)=>x-y).join(','));
-const hexSeeds = [...edges].map(e=>{
-  const [p,q] = e.split(',').map(Number);
-  return new THREE.Vector3(...ICO_V[p]).add(new THREE.Vector3(...ICO_V[q])).normalize();
-});
-if(pentSeeds.length!==12 || hexSeeds.length!==30) throw new Error('bad ball topology');
+function chamferedDodecahedron(){
+  const verts = ICO_V.map(v=>new THREE.Vector3(...v).normalize());
+  const mid = new Map();
+  const midpoint = (a,b)=>{
+    const k = a<b ? a+','+b : b+','+a;
+    if(!mid.has(k)){ verts.push(verts[a].clone().add(verts[b]).normalize()); mid.set(k, verts.length-1); }
+    return mid.get(k);
+  };
+  const tris = [];
+  for(const [a,b,c] of ICO_F){
+    const ab=midpoint(a,b), bc=midpoint(b,c), ca=midpoint(c,a);
+    tris.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);
+  }
+  if(verts.length!==42 || tris.length!==80) throw new Error('bad ball topology');
 
-const byLat = (a,b)=>b.y-a.y;
-pentSeeds.sort(byLat); hexSeeds.sort(byLat);
+  /* circumcenter: the point on the sphere equidistant from three centers */
+  const dual = tris.map(([a,b,c])=>{
+    const A=verts[a], B=verts[b], C=verts[c];
+    const v = new THREE.Vector3().subVectors(B,A).cross(new THREE.Vector3().subVectors(C,A)).normalize();
+    return v.dot(A) < 0 ? v.negate() : v;
+  });
+  const inc = verts.map(()=>[]);
+  tris.forEach((t,i)=>t.forEach(v=>inc[v].push(i)));
+
+  return verts.map((c,i)=>{
+    let u = new THREE.Vector3(0,0,1).cross(c);
+    if(u.lengthSq() < 1e-8) u = new THREE.Vector3(1,0,0).cross(c);
+    u.normalize();
+    const w = c.clone().cross(u);
+    const ring = inc[i].map(t=>dual[t])
+      .sort((p,q)=>Math.atan2(p.dot(w),p.dot(u)) - Math.atan2(q.dot(w),q.dot(u)));
+    return {center:c, ring, pent: i<12};
+  });
+}
+
+const CELLS = chamferedDodecahedron();
+const pentCells = CELLS.filter(c=>c.pent).sort((a,b)=>b.center.y-a.center.y);
+const hexCells  = CELLS.filter(c=>!c.pent).sort((a,b)=>b.center.y-a.center.y);
+if(pentCells.some(c=>c.ring.length!==5) || hexCells.some(c=>c.ring.length!==6))
+  throw new Error('cells are not pentagons and hexagons');
 
 /* group winners take the pentagons, in group order, north to south */
 const byGroupRank = (a,b)=>
@@ -330,55 +365,43 @@ const pentTeams = TEAMS.filter(t=>t.panel &&  t.winner).sort(byGroupRank);
 const hexTeams  = TEAMS.filter(t=>t.panel && !t.winner).sort(byGroupRank);
 
 const PANELS = [];
-pentTeams.forEach((t,i)=>{ t.seed = pentSeeds[i]; t.pent = true;  PANELS.push(t); });
-hexTeams .forEach((t,i)=>{ t.seed = hexSeeds[i];  t.pent = false; PANELS.push(t); });
-PANELS.forEach((t,i)=>{ t.pi = i; });
+pentTeams.forEach((t,i)=>{ t.cell = pentCells[i]; PANELS.push(t); });
+hexTeams .forEach((t,i)=>{ t.cell = hexCells[i];  PANELS.push(t); });
+PANELS.forEach((t,i)=>{ t.pi = i; t.centroid = t.cell.center; });
 TEAMS.filter(t=>!t.panel).forEach(t=>{ t.pi = -1; });
 const N = PANELS.length;                        // 42
 
-/* ---------- icosphere, then nearest-seed partition = spherical Voronoi ---------- */
-function icosphere(depth){
-  let V = ICO_V.map(v=>new THREE.Vector3(...v).normalize());
-  let F = ICO_F.map(f=>f.map(i=>V[i]));
-  for(let d=0;d<depth;d++){
+/* Fan the polygon from its center, then subdivide onto the sphere: the panel
+   bulges and its edges become true great-circle arcs. */
+function cellTriangles(cell, shrink, depth){
+  const c = cell.center;
+  const ring = cell.ring.map(p=>p.clone().lerp(c, shrink).normalize());
+  let tris = ring.map((p,i)=>[c.clone(), p, ring[(i+1)%ring.length]]);
+  const [a,b,d0] = tris[0];
+  const nrm = new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(d0,a));
+  if(nrm.dot(c) < 0) tris = tris.map(t=>[t[0],t[2],t[1]]);   // wind CCW from outside
+  for(let k=0;k<depth;k++){
     const out=[];
-    for(const [a,b,c] of F){
-      const ab=a.clone().add(b).normalize(), bc=b.clone().add(c).normalize(), ca=c.clone().add(a).normalize();
-      out.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);
+    for(const [p,q,r] of tris){
+      const pq=p.clone().add(q).normalize(), qr=q.clone().add(r).normalize(), rp=r.clone().add(p).normalize();
+      out.push([p,pq,rp],[pq,q,qr],[rp,qr,r],[pq,qr,rp]);
     }
-    F=out;
+    tris=out;
   }
-  return F;
-}
-const FACES = icosphere(5);   // 20,480 triangles
-
-const buckets = Array.from({length:N},()=>[]);
-const cen = new THREE.Vector3();
-for(const f of FACES){
-  cen.copy(f[0]).add(f[1]).add(f[2]).normalize();
-  let best=0, bd=-2;
-  for(let i=0;i<N;i++){ const d=cen.dot(PANELS[i].seed); if(d>bd){bd=d;best=i;} }
-  buckets[best].push(f);
+  return tris;
 }
 
-/* Each region gets its own vertex copies, pulled ~6% toward the region's own
-   center. Regions shrink away from each other and the dark inner sphere shows
-   through as a seam — the same trick that makes a stitched ball read as panels. */
-const SHRINK = 0.062;
+/* Panels pull 7% toward their own center; the dark inner sphere shows through the
+   gaps as a seam — the trick that makes a stitched ball read as panels. */
+const SHRINK = 0.070;
 const ball = new THREE.Group();
 const meshes = [];
 for(let i=0;i<N;i++){
-  const c = new THREE.Vector3();
-  buckets[i].forEach(f=>c.add(f[0]).add(f[1]).add(f[2]));
-  c.normalize();
-  PANELS[i].centroid = c;
-
-  const pos = new Float32Array(buckets[i].length*9);
+  const tris = cellTriangles(PANELS[i].cell, SHRINK, 3);
+  const pos = new Float32Array(tris.length*9);
   let p=0;
-  const v = new THREE.Vector3();
-  for(const f of buckets[i]) for(const vert of f){
-    v.copy(vert).lerp(c,SHRINK).normalize().multiplyScalar(R);
-    pos[p++]=v.x; pos[p++]=v.y; pos[p++]=v.z;
+  for(const f of tris) for(const v of f){
+    pos[p++]=v.x*R; pos[p++]=v.y*R; pos[p++]=v.z*R;
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));

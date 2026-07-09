@@ -10,9 +10,17 @@ A soccer ball is a Goldberg polyhedron, and Goldberg polyhedra have **10T + 2** 
 where T = m² + mn + n². The sequence runs 12, 32, **42**, 72, 92. Forty-eight is not in it,
 so a 48-cell sphere can only be an irregular Voronoi mush — cell areas vary by 40%.
 
-Forty-two is GP(2,0), the chamfered dodecahedron: **12 pentagons and 30 hexagons**, cell
-areas within 6%. It's built by subdividing an icosahedron once and taking its 42 vertices
-(12 originals, 30 edge midpoints) as Voronoi seeds.
+Forty-two is GP(2,0), the chamfered dodecahedron: **12 pentagons and 30 hexagons**. It's
+built by subdividing an icosahedron once and taking its 42 vertices (12 originals, 30 edge
+midpoints) as panel centers.
+
+The panels are **exact spherical polygons**, not unions of mesh triangles. A cell's corners
+are the circumcenters of the Delaunay triangles around its center — i.e. the 80 faces of the
+subdivided icosahedron. Sort them around the center, fan-triangulate, subdivide onto the
+sphere. Approximating a cell as "every fine triangle nearest this center" is far easier and
+looks wrong: at depth 5 the triangle edge is 1.98°, so the boundary sawtooth is ~0.99°, while
+the seam is only 0.98° wide. The zigzag is the same size as the gap it lives in, and the ball
+reads as blobs.
 
 The 12 pentagons are the 12 group winners. Six group-stage exits — Uzbekistan, Saudi
 Arabia, Qatar, Tunisia, Turkey, Curaçao — have no panel. They're still fully searchable,
