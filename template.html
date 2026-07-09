@@ -2,8 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>The Ball Goes Dark — World Cup 2026</title>
+
+<!-- ========================================================================
+     Set SITE to your deployed origin, no trailing slash, after the first
+     Vercel deploy. Scrapers for iMessage, Slack and X will not resolve a
+     relative og:image; it has to be absolute. Then redeploy once.
+     ===================================================================== -->
+<link rel="canonical" href="https://ball-goes-dark.vercel.app/">
+<meta name="description" content="Forty-eight nations, one panel each on a rotating soccer ball. A panel dims when its country goes home. Results, scorers and history for every team at the 2026 World Cup.">
+<meta name="author" content="Jay Nargundkar">
+<meta name="theme-color" content="#080C10">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Ball Goes Dark">
+<meta property="og:title" content="The Ball Goes Dark">
+<meta property="og:description" content="Forty-eight nations, one panel each. A panel dims when its country goes home.">
+<meta property="og:url" content="https://ball-goes-dark.vercel.app/">
+<meta property="og:image" content="https://ball-goes-dark.vercel.app/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A dark soccer ball whose panels are the 48 World Cup nations; the surviving teams glow gold.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Ball Goes Dark">
+<meta name="twitter:description" content="Forty-eight nations, one panel each. A panel dims when its country goes home.">
+<meta name="twitter:image" content="https://ball-goes-dark.vercel.app/og.png">
+
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<!-- iOS: Add to Home Screen / Shortcuts -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ball Goes Dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Archivo+Black&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -46,6 +83,7 @@
 
   /* ---------- stat strip ---------- */
   #strip{position:fixed;bottom:0;left:0;right:0;z-index:5;pointer-events:none;
+    padding-bottom:env(safe-area-inset-bottom);
     display:flex;gap:0;border-top:1px solid var(--line);background:linear-gradient(transparent,rgba(8,12,16,.9) 40%)}
   .stat{flex:1;padding:12px 18px 14px;border-right:1px solid var(--line)}
   .stat:last-child{border-right:0}
@@ -64,6 +102,8 @@
   .rlabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--dim);margin:0 0 9px}
   #legend{display:grid;gap:6px}
+  .rnote{font-size:10.5px;line-height:1.6;color:var(--dim);margin:16px 0 0;
+    padding-top:12px;border-top:1px solid var(--line)}
   .lg{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--mute)}
   .sw{width:13px;height:13px;border-radius:2px;flex:none;border:1px solid rgba(255,255,255,.08)}
   .lg .c{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
@@ -83,6 +123,9 @@
   #list button:hover,#list button:focus-visible{background:rgba(255,255,255,.05);color:var(--ink);outline:none}
   #list .cd{font-family:var(--mono);font-size:10px;color:var(--dim);width:30px;flex:none}
   #list .rk{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  #list .nopanel{font-style:normal;font-family:var(--mono);font-size:8px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--dim);border:1px solid var(--line);padding:1px 4px;
+    border-radius:2px;margin-left:7px;vertical-align:1px}
   #list .dot{width:6px;height:6px;border-radius:50%;flex:none;align-self:center}
 
   /* ---------- tooltip ---------- */
@@ -132,6 +175,8 @@
   .verdict{margin:20px 0 0;padding:14px 15px;border-left:2px solid var(--gold);background:rgba(240,180,41,.05);
     font-size:13px;line-height:1.5;color:var(--ink)}
   .verdict.out{border-color:var(--steel);background:rgba(60,83,100,.09);color:var(--mute)}
+  .nopanelnote{margin:14px 0 0;font-size:11.5px;line-height:1.55;color:var(--dim);
+    padding:9px 11px;border:1px dashed var(--line);border-radius:2px}
   .verdict b{color:var(--ink);font-weight:600}
 
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
@@ -194,13 +239,15 @@
   <p class="eyebrow">FIFA World Cup 26</p>
   <h1>The ball<br>goes <em>dark</em></h1>
   <p class="byline">Created by Jay Nargundkar <span>&middot;</span> <b>through July 8</b></p>
-  <p class="dek">Forty-eight nations, one panel each. A panel dims when its country goes home.
-  <b><span id="litN">Eight are</span> still lit.</b> Drag to turn the ball, pinch to zoom, tap a panel for individual country details.</p>
+  <p class="dek">A panel dims when its country goes home. <b><span id="litN">Eight are</span> still lit.</b>
+  Drag to turn the ball, pinch to zoom, tap a panel for individual country details.</p>
 </header>
 
 <div id="rail">
   <p class="rlabel">How far they got</p>
   <div id="legend"></div>
+  <p class="rnote">The 12 pentagons are the group winners.<br>
+  Six group-stage exits have no panel, but they can be found via the search box.</p>
 </div>
 
 <div id="finder">
@@ -239,7 +286,7 @@
 <script>
 const DATA = /*__DATA__*/;
 const TEAMS = DATA.teams;
-const N = TEAMS.length;                       // 48
+const PHI = (1+Math.sqrt(5))/2;
 const R = 1.0;
 
 /* ---------- palette (must mirror the CSS custom properties) ---------- */
@@ -248,31 +295,51 @@ const STAGE_NAME = ['Group stage','Round of 32','Round of 16','Quarter-finals','
 const GROUPS = 'ABCDEFGHIJKL'.split('');
 const colorFor = t => STAGE_COL[t.stage];
 
-/* ---------- seed the sphere: Fibonacci lattice, sorted north→south ---------- */
-/* Sorting by latitude and then dealing the 12 groups in order means group-mates
-   sit in the same band. Turning the ball top-to-bottom walks the group stage. */
-const seeds = [];
-const GA = Math.PI*(3-Math.sqrt(5));
-for(let i=0;i<N;i++){
-  const y = 1 - (i/(N-1))*2;
-  const r = Math.sqrt(Math.max(0,1-y*y));
-  const th = GA*i;
-  seeds.push(new THREE.Vector3(Math.cos(th)*r, y, Math.sin(th)*r).normalize());
-}
-seeds.sort((a,b)=>b.y-a.y);
+/* ---------- the ball is a chamfered dodecahedron (Goldberg GP(2,0)) ----------
+   A soccer ball has 10T+2 panels: 12, 32, 42, 72... Forty-eight is not in that
+   sequence, so 48 cells can only ever be irregular. Forty-two is, and it is the
+   familiar shape: 12 pentagons + 30 hexagons.
 
-const ordered = TEAMS.slice().sort((a,b)=>
-  a.group===b.group ? a.rank-b.rank : GROUPS.indexOf(a.group)-GROUPS.indexOf(b.group));
-ordered.forEach((t,i)=>{ t.seed = seeds[i]; t.i = i; });
+   Construction: subdivide an icosahedron once. Its 42 vertices — 12 originals
+   plus 30 edge midpoints — are the panel centers. A spherical Voronoi over them
+   yields a pentagon at each original vertex and a hexagon at each midpoint.
+   The 12 pentagons go to the 12 group winners. */
+const ICO_V = [[-1,PHI,0],[1,PHI,0],[-1,-PHI,0],[1,-PHI,0],[0,-1,PHI],[0,1,PHI],
+               [0,-1,-PHI],[0,1,-PHI],[PHI,0,-1],[PHI,0,1],[-PHI,0,-1],[-PHI,0,1]];
+const ICO_F = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],
+               [10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],
+               [2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+
+const pentSeeds = ICO_V.map(v=>new THREE.Vector3(...v).normalize());
+const edges = new Set();
+for(const [a,b,c] of ICO_F)
+  for(const [p,q] of [[a,b],[b,c],[c,a]]) edges.add([p,q].sort((x,y)=>x-y).join(','));
+const hexSeeds = [...edges].map(e=>{
+  const [p,q] = e.split(',').map(Number);
+  return new THREE.Vector3(...ICO_V[p]).add(new THREE.Vector3(...ICO_V[q])).normalize();
+});
+if(pentSeeds.length!==12 || hexSeeds.length!==30) throw new Error('bad ball topology');
+
+const byLat = (a,b)=>b.y-a.y;
+pentSeeds.sort(byLat); hexSeeds.sort(byLat);
+
+/* group winners take the pentagons, in group order, north to south */
+const byGroupRank = (a,b)=>
+  a.group===b.group ? a.rank-b.rank : GROUPS.indexOf(a.group)-GROUPS.indexOf(b.group);
+const pentTeams = TEAMS.filter(t=>t.panel &&  t.winner).sort(byGroupRank);
+const hexTeams  = TEAMS.filter(t=>t.panel && !t.winner).sort(byGroupRank);
+
+const PANELS = [];
+pentTeams.forEach((t,i)=>{ t.seed = pentSeeds[i]; t.pent = true;  PANELS.push(t); });
+hexTeams .forEach((t,i)=>{ t.seed = hexSeeds[i];  t.pent = false; PANELS.push(t); });
+PANELS.forEach((t,i)=>{ t.pi = i; });
+TEAMS.filter(t=>!t.panel).forEach(t=>{ t.pi = -1; });
+const N = PANELS.length;                        // 42
 
 /* ---------- icosphere, then nearest-seed partition = spherical Voronoi ---------- */
 function icosphere(depth){
-  const t=(1+Math.sqrt(5))/2;
-  let V=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],
-         [t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(v=>new THREE.Vector3(...v).normalize());
-  let F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
-         [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]]
-        .map(f=>f.map(i=>V[i]));
+  let V = ICO_V.map(v=>new THREE.Vector3(...v).normalize());
+  let F = ICO_F.map(f=>f.map(i=>V[i]));
   for(let d=0;d<depth;d++){
     const out=[];
     for(const [a,b,c] of F){
@@ -290,7 +357,7 @@ const cen = new THREE.Vector3();
 for(const f of FACES){
   cen.copy(f[0]).add(f[1]).add(f[2]).normalize();
   let best=0, bd=-2;
-  for(let i=0;i<N;i++){ const d=cen.dot(ordered[i].seed); if(d>bd){bd=d;best=i;} }
+  for(let i=0;i<N;i++){ const d=cen.dot(PANELS[i].seed); if(d>bd){bd=d;best=i;} }
   buckets[best].push(f);
 }
 
@@ -304,7 +371,7 @@ for(let i=0;i<N;i++){
   const c = new THREE.Vector3();
   buckets[i].forEach(f=>c.add(f[0]).add(f[1]).add(f[2]));
   c.normalize();
-  ordered[i].centroid = c;
+  PANELS[i].centroid = c;
 
   const pos = new Float32Array(buckets[i].length*9);
   let p=0;
@@ -370,7 +437,7 @@ function labelSprite(code){
   }
   return sp;
 }
-const sprites = ordered.map(t=>{
+const sprites = PANELS.map(t=>{
   const s = labelSprite(t.code);
   s.position.copy(t.centroid).multiplyScalar(R*1.04);
   ball.add(s); return s;
@@ -413,7 +480,7 @@ function spin(axis, ang){ tmpQ.setFromAxisAngle(axis, ang); q.premultiply(tmpQ);
 
 function faceTeam(i){
   qFrom.copy(q);
-  qTo.setFromUnitVectors(ordered[i].centroid.clone().normalize(), FRONT);
+  qTo.setFromUnitVectors(PANELS[i].centroid.clone().normalize(), FRONT);
   tT = 0; target = i;
 }
 
@@ -470,14 +537,14 @@ function castAt(x,y){
   const hit = ray.intersectObjects(meshes,false);
   return hit.length ? hit[0].object.userData.i : -1;
 }
-function pick(x,y){ const i=castAt(x,y); if(i>=0){ select(i); faceTeam(i); } }
+function pick(x,y){ const i=castAt(x,y); if(i>=0){ select(PANELS[i]); faceTeam(i); } }
 
 const tip = document.getElementById('tip');
 function hover(e){
   const i = castAt(e.clientX,e.clientY);
   if(i!==hovered){ hovered=i; paint(); }
   if(i>=0){
-    const t=ordered[i];
+    const t=PANELS[i];
     tip.textContent = `${t.code} · ${t.name}`;
     tip.style.left=e.clientX+'px'; tip.style.top=e.clientY+'px'; tip.style.opacity='1';
     cv.style.cursor='pointer';
@@ -488,7 +555,7 @@ function hideTip(){ tip.style.opacity='0'; cv.style.cursor='grab'; }
 /* ---------- painting ---------- */
 function paint(){
   for(let i=0;i<N;i++){
-    const t=ordered[i], m=meshes[i].material;
+    const t=PANELS[i], m=meshes[i].material;
     m.color.set(colorFor(t));
     m.emissive.set(t.lit ? (t.stage===6 ? 0x8A6400 : 0x5A3D00) : 0x000000);
     m.emissiveIntensity = t.lit ? 1 : 0;
@@ -519,10 +586,10 @@ function frame(now){
   const camDir = camera.position.clone().normalize();
   const w = new THREE.Vector3();
   for(let i=0;i<N;i++){
-    w.copy(ordered[i].centroid).applyQuaternion(q);
+    w.copy(PANELS[i].centroid).applyQuaternion(q);
     const f = w.dot(camDir);
     sprites[i].material.opacity = Math.max(0, Math.min(1,(f-0.30)/0.30));
-    if(ordered[i].lit && i!==selected && i!==hovered)
+    if(PANELS[i].lit && i!==selected && i!==hovered)
       meshes[i].material.emissiveIntensity = 0.72 + 0.28*Math.sin(pulse*1.6 + i);
   }
   renderer.render(scene,camera);
@@ -545,14 +612,21 @@ const q$ = document.getElementById('q'), list = document.getElementById('list');
 function renderList(){
   const term = q$.value.trim().toLowerCase();
   if(!term){ list.innerHTML=''; return; }
-  const hits = ordered
+  /* search reaches all 48 — including the six the ball has no room for */
+  const hits = TEAMS
     .filter(t=>t.name.toLowerCase().includes(term)||t.code.toLowerCase().includes(term))
+    .sort((a,b)=>a.rank-b.rank)
     .slice(0,9);
-  list.innerHTML = hits.map(t=>
-    `<button data-i="${t.i}" role="option"><span class="dot" style="background:${colorFor(t,'stage')}"></span>
-     <span class="cd">${t.code}</span><span>${t.name}</span><span class="rk">#${t.rank}</span></button>`).join('');
+  list.innerHTML = hits.map((t,n)=>
+    `<button data-n="${n}" role="option"><span class="dot" style="background:${colorFor(t)}"></span>
+     <span class="cd">${t.code}</span>
+     <span>${t.name}${t.panel?'':'<em class="nopanel">no panel</em>'}</span>
+     <span class="rk">#${t.rank}</span></button>`).join('');
   list.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-    const i=+b.dataset.i; select(i); faceTeam(i); q$.value=''; list.innerHTML='';
+    const t = hits[+b.dataset.n];
+    select(t);
+    if(t.pi >= 0) faceTeam(t.pi);      // the six without panels open the card in place
+    q$.value=''; list.innerHTML='';
   }));
 }
 q$.addEventListener('input',renderList);
@@ -580,9 +654,8 @@ function verdictOf(t){
 }
 const DEBUTANTS = TEAMS.filter(t=>t.debutant).map(t=>t.name);
 
-function select(i){
-  selected = i; paint();
-  const t = ordered[i];
+function select(t){
+  selected = t.pi; paint();
   const [vtxt,out] = verdictOf(t);
   const played = t.matches.filter(m=>m.played);
   const next = t.matches.filter(m=>!m.played);
@@ -626,7 +699,10 @@ function select(i){
   cbody.innerHTML = `
     <p class="ccode">${t.code}</p>
     <h2 class="cname">${t.name}</h2>
-    <p class="cmeta">Group ${t.group} &middot; ${t.conf}</p>
+    <p class="cmeta">Group ${t.group} &middot; ${t.conf}${
+      t.winner ? ' &middot; <b style="color:var(--gold);font-weight:400">Group winner</b>' : ''}</p>
+    ${t.panel ? '' : `<p class="nopanelnote">A ball has 42 panels, not 48. ${t.name} is one of six
+      group-stage exits without one — searchable, but not on the ball.</p>`}
     <div class="verdict ${out?'out':''}">${vtxt}</div>
     <div class="grid3">
       <div class="cell"><div class="n">${t.w}–${t.d}–${t.l}</div><div class="k">W–D–L</div></div>

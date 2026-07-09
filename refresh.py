@@ -9,7 +9,7 @@ Commit index.html and Vercel redeploys. No Node, no npm, no build step.
 
 Only the standard library is used.
 """
-import json, urllib.request, pathlib, sys
+import json, urllib.request, pathlib, sys, collections
 
 HERE = pathlib.Path(__file__).parent
 SRC  = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
@@ -105,6 +105,8 @@ HIST = {
 
 # The third-place match is played by the teams that LOST the semi-finals, so it
 # must not promote them to the same stage as the finalists.
+GROUPS_ALL = 'ABCDEFGHIJKL'
+
 KO_ORDER = {'Round of 32':1,'Round of 16':2,'Quarter-final':3,'Semi-final':4,
             'Match for third place':4,'Final':5}
 STAGE_LABEL = {0:'Group stage',1:'Round of 32',2:'Round of 16',3:'Quarter-finals',
@@ -212,6 +214,36 @@ for t in sorted(teams):
 boot.sort(key=lambda r: (-r['g'], r['n']))
 boot = [r for r in boot if r['g'] >= 3]      # client cuts at 10 and extends through ties
 
+# ---- who gets a panel, and who sits on a pentagon ---------------------------
+# A soccer ball is a Goldberg polyhedron: 10T+2 faces, so 12, 32, 42, 72, 92...
+# 48 is not in that sequence, which is why a 48-cell ball can only ever be
+# irregular blobs. 42 is GP(2,0), the chamfered dodecahedron: 12 pentagons and
+# 30 hexagons. Six group-stage exits give up their panel and stay searchable.
+NO_PANEL = {'Uzbekistan', 'Saudi Arabia', 'Qatar', 'Tunisia', 'Turkey', 'Curaçao'}
+
+standings = collections.defaultdict(lambda: [0, 0, 0])       # pts, gd, gf
+for t, d in teams.items():
+    for m in d['matches']:
+        if m['ko'] == 0 and m['played']:
+            standings[t][0] += 3 if m['res'] == 'W' else (1 if m['res'] == 'D' else 0)
+            standings[t][1] += m['gf'] - m['ga']
+            standings[t][2] += m['gf']
+
+winners = set()
+for g in GROUPS_ALL:
+    members = [t for t in teams if teams[t]['group'] == g]
+    members.sort(key=lambda n: (-standings[n][0], -standings[n][1], -standings[n][2]))
+    winners.add(members[0])
+
+for t, d in teams.items():
+    d['panel'] = t not in NO_PANEL
+    d['winner'] = t in winners
+
+n_panel = sum(1 for d in teams.values() if d['panel'])
+n_pent = sum(1 for d in teams.values() if d['panel'] and d['winner'])
+assert n_panel == 42, f'{n_panel} panels, need 42'
+assert n_pent == 12, f'{n_pent} pentagon teams, need 12'
+
 out = {'generated':'2026-07-08','rank_release':'2026-06-11',
        'boot':boot,
        'teams':[teams[t] for t in sorted(teams)]}
@@ -227,6 +259,9 @@ if "/*__DATA__*/" not in tpl or "/*__FLAGS__*/" not in tpl:
 html = tpl.replace("/*__DATA__*/", data).replace("/*__FLAGS__*/", flags)
 (HERE / "index.html").write_text(html, encoding="utf-8")
 
+# render_assets.py draws the OG card and icons from this, so keep it committed
+(HERE / "data" / "teams.json").write_text(data, encoding="utf-8")
+
 # ---------------------------------------------------------------- checks
 named = sum(s["g"] for t in out["teams"] for s in t["top"])
 og    = sum(t["og_for"] for t in out["teams"])
@@ -239,4 +274,6 @@ lit = [t["name"] for t in out["teams"] if t["lit"]]
 print(f"  {goals} goals = {named} named + {og} own goals  [ok]")
 print(f"  golden boot: {out['boot'][0]['n']} ({out['boot'][0]['g']})")
 print(f"  lit panels: {len(lit)} -> {', '.join(lit)}")
-print(f"wrote index.html ({(HERE / 'index.html').stat().st_size:,} bytes)")
+print(f"  ball: {n_panel} panels = {n_pent} pentagons (group winners) + {n_panel-n_pent} hexagons")
+print(f"  no panel: {', '.join(sorted(NO_PANEL))}")
+print(f"wrote index.html ({(HERE / 'index.html').stat().st_size:,} bytes) + data/teams.json")

@@ -1,0 +1,14 @@
+{
+  "name": "The Ball Goes Dark — World Cup 2026",
+  "short_name": "Ball Goes Dark",
+  "description": "Forty-eight nations, one panel each. A panel dims when its country goes home.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080C10",
+  "theme_color": "#080C10",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
