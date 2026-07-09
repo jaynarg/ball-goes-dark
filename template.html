@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>The Ball Goes Dark — World Cup 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Archivo+Black&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#080C10;
+    --deep:#0D141A;
+    --line:#1E2C36;
+    --ink:#E6EDF2;
+    --mute:#7B8C99;
+    --dim:#4A5A66;
+    --gold:#F0B429;
+    --ember:#E8483A;
+    --ice:#7BA0B5;
+    --steel:#3C5364;
+    --slate:#2A353F;
+    --disp:'Archivo Black','Arial Black','Segoe UI',sans-serif;
+    --body:'Archivo','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--ink);
+    font-family:var(--body);overflow:hidden;-webkit-font-smoothing:antialiased}
+  canvas{display:block;touch-action:none}
+  #stage{position:fixed;inset:0}
+
+  /* ---------- masthead ---------- */
+  #head{position:fixed;top:0;left:0;padding:26px 28px;z-index:5;pointer-events:none;max-width:min(46ch,52vw)}
+  .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--mute);margin:0 0 14px}
+  .byline{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--mute);margin:0 0 14px}
+  .byline b{color:var(--gold);font-weight:400}
+  .byline span{color:var(--dim)}
+  h1{font-family:var(--disp);font-size:clamp(26px,3.4vw,46px);line-height:.94;letter-spacing:-.02em;
+    text-transform:uppercase;margin:0 0 12px}
+  h1 em{font-style:normal;color:var(--gold)}
+  .dek{font-size:13.5px;line-height:1.5;color:var(--mute);margin:0;max-width:38ch}
+  .dek b{color:var(--ink);font-weight:500}
+
+  /* ---------- stat strip ---------- */
+  #strip{position:fixed;bottom:0;left:0;right:0;z-index:5;pointer-events:none;
+    display:flex;gap:0;border-top:1px solid var(--line);background:linear-gradient(transparent,rgba(8,12,16,.9) 40%)}
+  .stat{flex:1;padding:12px 18px 14px;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat .n{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:-.02em}
+  .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+  .statbtn{pointer-events:auto;cursor:pointer;background:none;font:inherit;text-align:left;color:inherit;
+    border:0;transition:background .15s}
+  .statbtn:hover{background:rgba(240,180,41,.07)}
+  .statbtn:hover .k{color:var(--gold)}
+  .statbtn:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+  .statbtn .k i{font-style:normal;font-size:8px;vertical-align:1px;margin-left:2px}
+  .statbtn .n .g{color:var(--gold)}
+
+  /* ---------- rail ---------- */
+  #rail{position:fixed;left:28px;bottom:88px;z-index:6;width:230px}
+  .rlabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 9px}
+  #legend{display:grid;gap:6px}
+  .lg{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--mute)}
+  .sw{width:13px;height:13px;border-radius:2px;flex:none;border:1px solid rgba(255,255,255,.08)}
+  .lg .c{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+
+  /* ---------- finder ---------- */
+  #finder{position:fixed;right:28px;top:26px;z-index:6;width:230px}
+  #q{width:100%;background:rgba(13,20,26,.8);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--mono);font-size:11.5px;padding:9px 11px;border-radius:2px;letter-spacing:.04em;
+    backdrop-filter:blur(8px)}
+  #q::placeholder{color:var(--dim)}
+  #q:focus{outline:none;border-color:var(--gold)}
+  #list{margin-top:6px;max-height:min(46vh,420px);overflow:auto;
+    background:rgba(13,20,26,.8);border:1px solid var(--line);border-radius:2px;backdrop-filter:blur(8px)}
+  #list:empty{display:none}
+  #list button{display:flex;width:100%;gap:9px;align-items:baseline;background:none;border:0;
+    color:var(--mute);padding:7px 11px;cursor:pointer;text-align:left;font-family:var(--body);font-size:12px}
+  #list button:hover,#list button:focus-visible{background:rgba(255,255,255,.05);color:var(--ink);outline:none}
+  #list .cd{font-family:var(--mono);font-size:10px;color:var(--dim);width:30px;flex:none}
+  #list .rk{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  #list .dot{width:6px;height:6px;border-radius:50%;flex:none;align-self:center}
+
+  /* ---------- tooltip ---------- */
+  #tip{position:fixed;z-index:8;pointer-events:none;opacity:0;transition:opacity .12s;
+    background:var(--ink);color:var(--void);padding:5px 8px;border-radius:2px;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;white-space:nowrap;transform:translate(-50%,-140%)}
+
+  /* ---------- golden boot modal ---------- */
+  #scrim{position:fixed;inset:0;z-index:10;background:rgba(4,7,10,.72);backdrop-filter:blur(3px)}
+  #boot{position:fixed;z-index:11;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(460px,calc(100vw - 36px));max-height:min(78vh,720px);overflow-y:auto;
+    background:var(--deep);border:1px solid var(--line);border-radius:3px;padding:26px 28px 24px;
+    box-shadow:0 24px 70px rgba(0,0,0,.6)}
+  #bootClose{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--line);
+    color:var(--mute);width:28px;height:28px;border-radius:2px;cursor:pointer;font-size:15px;line-height:1}
+  #bootClose:hover{color:var(--ink);border-color:var(--dim)}
+  #bootRows{margin-top:20px}
+  .br{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(30,44,54,.55)}
+  .br:last-child{border-bottom:0}
+  .br.lead{background:linear-gradient(90deg,rgba(240,180,41,.09),transparent);
+    margin:0 -10px;padding-left:10px;padding-right:10px}
+  .br .pos{font-family:var(--mono);font-size:11px;color:var(--dim);width:26px;flex:none}
+  .br.lead .pos{color:var(--gold)}
+  .br img{width:24px;height:18px;flex:none;border:1px solid rgba(255,255,255,.16);
+    object-fit:cover;image-rendering:auto}
+  .br .cd{font-family:var(--mono);font-size:10px;color:var(--dim);width:32px;flex:none}
+  .br .nm{flex:1;font-size:13px;color:var(--ink)}
+  .br .nm small{display:block;font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.06em;margin-top:1px}
+  .br .gl{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink)}
+  .br.lead .gl{color:var(--gold)}
+  @media (max-width:900px){ #boot{padding:22px 18px 20px} .br .nm{font-size:12.5px} }
+
+  /* ---------- card ---------- */
+  #card{position:fixed;top:0;right:0;bottom:0;width:392px;z-index:9;
+    background:var(--deep);border-left:1px solid var(--line);
+    transform:translateX(101%);transition:transform .34s cubic-bezier(.32,.72,0,1);
+    overflow-y:auto;overscroll-behavior:contain}
+  #card.on{transform:none}
+  .cbody{padding:26px 28px 40px}
+  #close{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--line);
+    color:var(--mute);width:28px;height:28px;border-radius:2px;cursor:pointer;font-size:15px;line-height:1}
+  #close:hover{color:var(--ink);border-color:var(--dim)}
+  .ccode{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--gold)}
+  .cname{font-family:var(--disp);font-size:31px;line-height:.98;letter-spacing:-.02em;text-transform:uppercase;
+    margin:8px 0 0}
+  .cmeta{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:9px}
+  .verdict{margin:20px 0 0;padding:14px 15px;border-left:2px solid var(--gold);background:rgba(240,180,41,.05);
+    font-size:13px;line-height:1.5;color:var(--ink)}
+  .verdict.out{border-color:var(--steel);background:rgba(60,83,100,.09);color:var(--mute)}
+  .verdict b{color:var(--ink);font-weight:600}
+
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border:1px solid var(--line);margin:22px 0 0}
+  .cell{background:var(--deep);padding:10px 8px}
+  .cell .n{font-family:var(--mono);font-size:16px;font-weight:700}
+  .cell .k{font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+
+  h3{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+    margin:28px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .m{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12.5px;border-bottom:1px solid rgba(30,44,54,.5)}
+  .m:last-child{border-bottom:0}
+  .chip{font-family:var(--mono);font-size:9.5px;font-weight:700;width:19px;height:19px;flex:none;
+    display:grid;place-items:center;border-radius:2px}
+  .W{background:#2E6B4F;color:#D6F5E4}.L{background:#5C2A2A;color:#F3CFCF}.D{background:#3A4854;color:#CBD6DE}
+  .m .rd{font-family:var(--mono);font-size:9px;color:var(--dim);width:40px;flex:none;text-transform:uppercase}
+  .m .op{flex:1;color:var(--ink)}
+  .m .op small{color:var(--dim);font-family:var(--mono);font-size:9.5px;margin-left:6px}
+  .m .sc{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .m.next{color:var(--gold)}
+  .m.next .op,.m.next .sc{color:var(--gold)}
+  .adv{font-style:normal;color:var(--gold);margin-left:5px;font-size:11px}
+
+  .sc-row{margin:9px 0}
+  .sc-top{display:flex;align-items:baseline;gap:8px;font-size:12.5px}
+  .sc-top .g{margin-left:auto;font-family:var(--mono);font-size:12.5px}
+  .sc-top small{font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+  .bar{height:3px;background:var(--line);margin-top:5px;border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--gold)}
+  .footnote{font-size:11px;color:var(--dim);line-height:1.5;margin-top:12px}
+  .none{font-size:12.5px;color:var(--mute);line-height:1.55}
+  .hist{font-size:12.5px;line-height:1.65;color:var(--mute)}
+  .hist b{color:var(--ink);font-weight:500}
+  .debut{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--gold);color:var(--void);padding:2px 6px;border-radius:2px;margin-left:6px}
+  .src{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:9px;line-height:1.7;color:var(--dim);letter-spacing:.04em}
+
+  @media (max-width:900px){
+    #head{padding:16px 18px;max-width:none}
+    .dek{display:none}
+    #finder{left:18px;right:18px;top:auto;bottom:96px;width:auto}
+    #list{max-height:30vh}
+    #rail{display:none}
+    #card{width:100%;top:auto;height:82%;border-left:0;border-top:1px solid var(--line);
+      transform:translateY(101%);border-radius:10px 10px 0 0}
+    #card.on{transform:none}
+    .stat{padding:9px 10px}
+    .stat .n{font-size:14px}.stat .k{font-size:8px;letter-spacing:.1em}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #card{transition:none}
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<header id="head">
+  <p class="eyebrow">FIFA World Cup 26</p>
+  <h1>The ball<br>goes <em>dark</em></h1>
+  <p class="byline">Created by Jay Nargundkar <span>&middot;</span> <b>through July 8</b></p>
+  <p class="dek">Forty-eight nations, one panel each. A panel dims when its country goes home.
+  <b><span id="litN">Eight are</span> still lit.</b> Drag to turn the ball, pinch to zoom, tap a panel for individual country details.</p>
+</header>
+
+<div id="rail">
+  <p class="rlabel">How far they got</p>
+  <div id="legend"></div>
+</div>
+
+<div id="finder">
+  <input id="q" type="search" placeholder="Find a country…" autocomplete="off" spellcheck="false" aria-label="Find a country">
+  <div id="list" role="listbox"></div>
+</div>
+
+<div id="tip" aria-hidden="true"></div>
+
+<div id="strip">
+  <div class="stat"><div class="n">96<span style="color:var(--dim)">/104</span></div><div class="k">Matches played</div></div>
+  <div class="stat"><div class="n">280</div><div class="k">Goals</div></div>
+  <div class="stat"><div class="n">169</div><div class="k">Different scorers</div></div>
+  <div class="stat"><div class="n">14</div><div class="k">Own goals</div></div>
+  <button class="stat statbtn" id="bootBtn" aria-haspopup="dialog">
+    <div class="n" id="bootN">—</div><div class="k">Golden Boot <i>&#9656;</i></div>
+  </button>
+</div>
+
+<div id="scrim" hidden></div>
+<div id="boot" role="dialog" aria-modal="true" aria-labelledby="bootTitle" hidden>
+  <button id="bootClose" aria-label="Close">&times;</button>
+  <p class="ccode">Top scorers</p>
+  <h2 id="bootTitle" class="cname">Golden Boot</h2>
+  <p class="cmeta" id="bootSub"></p>
+  <div id="bootRows"></div>
+  <p class="src" id="bootNote"></p>
+</div>
+
+<aside id="card" aria-live="polite" aria-label="Country detail">
+  <button id="close" aria-label="Close">&times;</button>
+  <div class="cbody" id="cbody"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const DATA = /*__DATA__*/;
+const TEAMS = DATA.teams;
+const N = TEAMS.length;                       // 48
+const R = 1.0;
+
+/* ---------- palette (must mirror the CSS custom properties) ---------- */
+const STAGE_COL = ['#232C35','#3C5364','#7BA0B5','#F0B429','#F9802B','#E8483A','#FFD84D'];
+const STAGE_NAME = ['Group stage','Round of 32','Round of 16','Quarter-finals','Semi-finals','Runners-up','Champions'];
+const GROUPS = 'ABCDEFGHIJKL'.split('');
+const colorFor = t => STAGE_COL[t.stage];
+
+/* ---------- seed the sphere: Fibonacci lattice, sorted north→south ---------- */
+/* Sorting by latitude and then dealing the 12 groups in order means group-mates
+   sit in the same band. Turning the ball top-to-bottom walks the group stage. */
+const seeds = [];
+const GA = Math.PI*(3-Math.sqrt(5));
+for(let i=0;i<N;i++){
+  const y = 1 - (i/(N-1))*2;
+  const r = Math.sqrt(Math.max(0,1-y*y));
+  const th = GA*i;
+  seeds.push(new THREE.Vector3(Math.cos(th)*r, y, Math.sin(th)*r).normalize());
+}
+seeds.sort((a,b)=>b.y-a.y);
+
+const ordered = TEAMS.slice().sort((a,b)=>
+  a.group===b.group ? a.rank-b.rank : GROUPS.indexOf(a.group)-GROUPS.indexOf(b.group));
+ordered.forEach((t,i)=>{ t.seed = seeds[i]; t.i = i; });
+
+/* ---------- icosphere, then nearest-seed partition = spherical Voronoi ---------- */
+function icosphere(depth){
+  const t=(1+Math.sqrt(5))/2;
+  let V=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],
+         [t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(v=>new THREE.Vector3(...v).normalize());
+  let F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+         [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]]
+        .map(f=>f.map(i=>V[i]));
+  for(let d=0;d<depth;d++){
+    const out=[];
+    for(const [a,b,c] of F){
+      const ab=a.clone().add(b).normalize(), bc=b.clone().add(c).normalize(), ca=c.clone().add(a).normalize();
+      out.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);
+    }
+    F=out;
+  }
+  return F;
+}
+const FACES = icosphere(5);   // 20,480 triangles
+
+const buckets = Array.from({length:N},()=>[]);
+const cen = new THREE.Vector3();
+for(const f of FACES){
+  cen.copy(f[0]).add(f[1]).add(f[2]).normalize();
+  let best=0, bd=-2;
+  for(let i=0;i<N;i++){ const d=cen.dot(ordered[i].seed); if(d>bd){bd=d;best=i;} }
+  buckets[best].push(f);
+}
+
+/* Each region gets its own vertex copies, pulled ~6% toward the region's own
+   center. Regions shrink away from each other and the dark inner sphere shows
+   through as a seam — the same trick that makes a stitched ball read as panels. */
+const SHRINK = 0.062;
+const ball = new THREE.Group();
+const meshes = [];
+for(let i=0;i<N;i++){
+  const c = new THREE.Vector3();
+  buckets[i].forEach(f=>c.add(f[0]).add(f[1]).add(f[2]));
+  c.normalize();
+  ordered[i].centroid = c;
+
+  const pos = new Float32Array(buckets[i].length*9);
+  let p=0;
+  const v = new THREE.Vector3();
+  for(const f of buckets[i]) for(const vert of f){
+    v.copy(vert).lerp(c,SHRINK).normalize().multiplyScalar(R);
+    pos[p++]=v.x; pos[p++]=v.y; pos[p++]=v.z;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('normal', new THREE.BufferAttribute(pos.slice(),3));   // unit sphere: pos == normal
+  const m = new THREE.MeshStandardMaterial({roughness:.62,metalness:.06,
+    emissive:new THREE.Color(0x000000), flatShading:false});
+  const mesh = new THREE.Mesh(g,m);
+  mesh.userData.i = i;
+  ball.add(mesh); meshes.push(mesh);
+}
+
+/* ---------- labels: flag over three-letter code ---------- */
+/* Flags are inlined as base64 PNGs (rasterized from lipis/flag-icons, 4:3, 96-color
+   palette) so the file needs no network at all. England and Scotland aren't ISO
+   countries; their SVGs come from the gb-eng / gb-sct subdivisions. */
+const FLAGS = /*__FLAGS__*/;
+
+const DPR = Math.min(window.devicePixelRatio||1, 2);
+const S = 192;                       // square canvas; sprite is scaled to match
+
+function drawLabel(ctx, code, img){
+  ctx.clearRect(0,0,S,S);
+  const fw=112, fh=84, fx=(S-fw)/2, fy=28;    // 4:3, matching the source flags
+
+  if(img){
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.75)'; ctx.shadowBlur=11; ctx.shadowOffsetY=2;
+    ctx.fillStyle='#0A0F14'; ctx.fillRect(fx-2,fy-2,fw+4,fh+4);   // plate behind the flag
+    ctx.restore();
+    ctx.drawImage(img, fx, fy, fw, fh);
+    ctx.strokeStyle='rgba(255,255,255,.30)'; ctx.lineWidth=2;
+    ctx.strokeRect(fx-1,fy-1,fw+2,fh+2);
+  }
+
+  const ty = img ? fy+fh+28 : S/2;
+  ctx.font='700 40px JetBrains Mono, Consolas, monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,.9)'; ctx.shadowBlur=9;
+  ctx.fillStyle='#0A0F14'; ctx.fillText(code,S/2,ty+1);
+  ctx.shadowBlur=0; ctx.fillStyle='#F4F8FA'; ctx.fillText(code,S/2,ty);
+}
+
+function labelSprite(code){
+  const cv=document.createElement('canvas'); cv.width=cv.height=S;
+  const ctx=cv.getContext('2d');
+  drawLabel(ctx, code, null);                  // code-only until the flag decodes
+  const tex=new THREE.CanvasTexture(cv); tex.anisotropy=4;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.scale.setScalar(.235);
+
+  const b64 = FLAGS[code];
+  if(b64){
+    const img=new Image();                     // data URI: same-origin, no CORS, no tainting
+    img.onload = ()=>{ drawLabel(ctx, code, img); tex.needsUpdate=true; };
+    img.src = 'data:image/png;base64,' + b64;
+  }
+  return sp;
+}
+const sprites = ordered.map(t=>{
+  const s = labelSprite(t.code);
+  s.position.copy(t.centroid).multiplyScalar(R*1.04);
+  ball.add(s); return s;
+});
+
+/* ---------- scene ---------- */
+const stage = document.getElementById('stage');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
+camera.position.set(0,0,3.35);
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(DPR);
+stage.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff,.30));
+const hemi = new THREE.HemisphereLight(0x9FC4D8, 0x0A0F14, .55); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xFFF0D0, 1.15); key.position.set(-3,3.4,4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x6FA8C8, .75); rim.position.set(4,-1.6,-3.2); scene.add(rim);
+
+const inner = new THREE.Mesh(new THREE.SphereGeometry(R*.955,64,48),
+  new THREE.MeshBasicMaterial({color:0x05080B}));
+scene.add(inner);
+scene.add(ball);
+
+function resize(){
+  const w=innerWidth,h=innerHeight;
+  camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h);
+}
+addEventListener('resize',resize); resize();
+
+/* ---------- orientation: quaternion arcball ---------- */
+const q = new THREE.Quaternion();
+let vy=0, vx=0, dragging=false, target=null, tT=0, qFrom=new THREE.Quaternion(), qTo=new THREE.Quaternion();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let idle = 0;
+const AXIS_Y = new THREE.Vector3(0,1,0), AXIS_X = new THREE.Vector3(1,0,0), FRONT = new THREE.Vector3(0,0,1);
+const tmpQ = new THREE.Quaternion();
+
+function spin(axis, ang){ tmpQ.setFromAxisAngle(axis, ang); q.premultiply(tmpQ); }
+
+function faceTeam(i){
+  qFrom.copy(q);
+  qTo.setFromUnitVectors(ordered[i].centroid.clone().normalize(), FRONT);
+  tT = 0; target = i;
+}
+
+/* ---------- pointer ---------- */
+const cv = renderer.domElement;
+let px=0,py=0,downX=0,downY=0,downT=0,moved=0;
+cv.style.cursor='grab';
+let touches=0;
+cv.addEventListener('pointerdown', e=>{
+  if(touches>1) return;
+  dragging=true; cv.setPointerCapture(e.pointerId);
+  px=downX=e.clientX; py=downY=e.clientY; downT=performance.now(); moved=0; target=null;
+});
+cv.addEventListener('pointermove', e=>{
+  if(dragging && touches<2){
+    const dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
+    moved += Math.abs(dx)+Math.abs(dy);
+    vy = dx*0.0052; vx = dy*0.0052;
+    spin(AXIS_Y, vy); spin(AXIS_X, vx);
+    idle = 0;
+  } else hover(e);
+});
+cv.addEventListener('pointerup', e=>{
+  dragging=false;
+  if(moved<7 && performance.now()-downT<450){ pick(e.clientX,e.clientY); }
+});
+cv.addEventListener('pointerleave', ()=>{ hideTip(); });
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  camera.position.z = Math.min(5.4, Math.max(2.25, camera.position.z + e.deltaY*0.0016));
+},{passive:false});
+
+/* pinch */
+let pinch=0;
+cv.addEventListener('touchstart', e=>{ touches=e.touches.length; if(touches>1) dragging=false; },{passive:true});
+cv.addEventListener('touchmove', e=>{
+  touches=e.touches.length;
+  if(e.touches.length===2){
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if(pinch) camera.position.z = Math.min(5.4, Math.max(2.25, camera.position.z - (d-pinch)*0.006));
+    pinch=d;
+  }
+},{passive:true});
+cv.addEventListener('touchend', e=>{ pinch=0; touches=e.touches.length; });
+
+/* ---------- picking ---------- */
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let hovered=-1, selected=-1;
+
+function castAt(x,y){
+  ndc.set((x/innerWidth)*2-1, -(y/innerHeight)*2+1);
+  ray.setFromCamera(ndc,camera);
+  const hit = ray.intersectObjects(meshes,false);
+  return hit.length ? hit[0].object.userData.i : -1;
+}
+function pick(x,y){ const i=castAt(x,y); if(i>=0){ select(i); faceTeam(i); } }
+
+const tip = document.getElementById('tip');
+function hover(e){
+  const i = castAt(e.clientX,e.clientY);
+  if(i!==hovered){ hovered=i; paint(); }
+  if(i>=0){
+    const t=ordered[i];
+    tip.textContent = `${t.code} · ${t.name}`;
+    tip.style.left=e.clientX+'px'; tip.style.top=e.clientY+'px'; tip.style.opacity='1';
+    cv.style.cursor='pointer';
+  } else hideTip();
+}
+function hideTip(){ tip.style.opacity='0'; cv.style.cursor='grab'; }
+
+/* ---------- painting ---------- */
+function paint(){
+  for(let i=0;i<N;i++){
+    const t=ordered[i], m=meshes[i].material;
+    m.color.set(colorFor(t));
+    m.emissive.set(t.lit ? (t.stage===6 ? 0x8A6400 : 0x5A3D00) : 0x000000);
+    m.emissiveIntensity = t.lit ? 1 : 0;
+    if(i===selected){ m.emissive.set(0xffffff); m.emissiveIntensity=.20; }
+    else if(i===hovered){ m.emissive.set(0xffffff); m.emissiveIntensity=.10; }
+  }
+}
+
+/* ---------- loop ---------- */
+let last=performance.now(), pulse=0;
+function frame(now){
+  const dt = Math.min(48, now-last); last=now;
+  pulse += dt/1000;
+
+  if(target!==null){
+    tT = Math.min(1, tT + dt/620);
+    const e = tT<.5 ? 4*tT*tT*tT : 1-Math.pow(-2*tT+2,3)/2;
+    q.copy(qFrom).slerp(qTo,e);
+    if(tT>=1) target=null;
+  } else if(!dragging){
+    vy*=0.945; vx*=0.945;
+    if(Math.abs(vy)>1e-5||Math.abs(vx)>1e-5){ spin(AXIS_Y,vy); spin(AXIS_X,vx); idle=0; }
+    else { idle+=dt; if(idle>1600 && !reduce && selected<0) spin(AXIS_Y, 0.00016*dt); }
+  }
+  ball.quaternion.copy(q);
+
+  /* lit panels breathe; sprites fade as they rotate away */
+  const camDir = camera.position.clone().normalize();
+  const w = new THREE.Vector3();
+  for(let i=0;i<N;i++){
+    w.copy(ordered[i].centroid).applyQuaternion(q);
+    const f = w.dot(camDir);
+    sprites[i].material.opacity = Math.max(0, Math.min(1,(f-0.30)/0.30));
+    if(ordered[i].lit && i!==selected && i!==hovered)
+      meshes[i].material.emissiveIntensity = 0.72 + 0.28*Math.sin(pulse*1.6 + i);
+  }
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- legend ---------- */
+const legend = document.getElementById('legend');
+function drawLegend(){
+  const counts = STAGE_COL.map((_,s)=>TEAMS.filter(t=>t.stage===s).length);
+  legend.innerHTML = STAGE_COL
+    .map((c,s)=>counts[s] ? [c, STAGE_NAME[s] + (TEAMS.some(t=>t.stage===s&&t.alive)?' · live':''), counts[s]] : null)
+    .filter(Boolean)
+    .map(([c,l,n])=>`<div class="lg"><span class="sw" style="background:${c}"></span>${l}<span class="c">${n}</span></div>`)
+    .join('');
+}
+
+/* ---------- finder ---------- */
+const q$ = document.getElementById('q'), list = document.getElementById('list');
+function renderList(){
+  const term = q$.value.trim().toLowerCase();
+  if(!term){ list.innerHTML=''; return; }
+  const hits = ordered
+    .filter(t=>t.name.toLowerCase().includes(term)||t.code.toLowerCase().includes(term))
+    .slice(0,9);
+  list.innerHTML = hits.map(t=>
+    `<button data-i="${t.i}" role="option"><span class="dot" style="background:${colorFor(t,'stage')}"></span>
+     <span class="cd">${t.code}</span><span>${t.name}</span><span class="rk">#${t.rank}</span></button>`).join('');
+  list.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.i; select(i); faceTeam(i); q$.value=''; list.innerHTML='';
+  }));
+}
+q$.addEventListener('input',renderList);
+
+/* ---------- card ---------- */
+const card = document.getElementById('card'), cbody = document.getElementById('cbody');
+const ROUND_SHORT = {'Round of 32':'R32','Round of 16':'R16','Quarter-final':'QF','Semi-final':'SF',
+                     'Match for third place':'3rd','Final':'F'};
+const fmtDate = d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
+const shortRound = r=>ROUND_SHORT[r] || 'GRP';
+
+function verdictOf(t){
+  const st = STAGE_NAME[t.stage].toLowerCase();
+  if(t.stage===6)
+    return [`<b>World champions.</b> Ranked <b>#${t.rank}</b> going in. The last panel still lit.`, false];
+  if(t.alive)
+    return [`Still standing. Ranked <b>#${t.rank}</b> in the world going in; through to the <b>${st}</b>.`, false];
+  if(t.debutant)
+    return [`A first World Cup, ranked <b>#${t.rank}</b>. Out in the <b>${st}</b>.`, true];
+  if(t.stage>0 && t.rank>=48)
+    return [`Ranked <b>#${t.rank}</b> of 211 going in. Reached the <b>${st}</b> anyway.`, true];
+  if(t.stage===0 && t.rank<=20)
+    return [`Ranked <b>#${t.rank}</b> in the world. Home after three games.`, true];
+  return [`Ranked <b>#${t.rank}</b> going in. Out in the <b>${st}</b>.`, true];
+}
+const DEBUTANTS = TEAMS.filter(t=>t.debutant).map(t=>t.name);
+
+function select(i){
+  selected = i; paint();
+  const t = ordered[i];
+  const [vtxt,out] = verdictOf(t);
+  const played = t.matches.filter(m=>m.played);
+  const next = t.matches.filter(m=>!m.played);
+
+  const rows = played.map(m=>
+    `<div class="m"><span class="chip ${m.res}">${m.res}</span>
+      <span class="rd">${shortRound(m.round)}</span>
+      <span class="op">${m.opp}${m.detail?`<small>${m.detail}</small>`:''}</span>
+      <span class="sc">${m.gf}–${m.ga}${m.adv?'<i class="adv">↑</i>':''}</span></div>`).join('');
+
+  const nextRows = next.map(m=>`<div class="m next"><span class="chip D" style="background:transparent;border:1px solid var(--gold);color:var(--gold)">·</span>
+      <span class="rd">${shortRound(m.round)}</span>
+      <span class="op">${m.opp}<small>${m.ground}</small></span>
+      <span class="sc">${fmtDate(m.date)}</span></div>`).join('');
+
+  let scorers;
+  if(!t.top.length){
+    scorers = `<p class="none">Did not score — the only country at this World Cup that never did.
+      ${t.pld} matches, ${t.ga} conceded.</p>`;
+  } else {
+    scorers = t.top.slice(0,5).map(s=>{
+      const pct = Math.round(100*s.g/t.gf);
+      return `<div class="sc-row"><div class="sc-top"><span>${s.name}</span>
+        ${s.pens?`<small>${s.pens} pen${s.pens>1?'s':''}</small>`:''}
+        <span class="g">${s.g}</span></div>
+        <div class="bar"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+    const rest = t.n_scorers - Math.min(5,t.top.length);
+    scorers += `<p class="footnote">Bars show each player's share of ${t.name}'s ${t.gf} goals.
+      ${rest>0?`${rest} other scorer${rest>1?'s':''}. `:''}
+      ${t.og_for?`${t.og_for} of those ${t.og_for>1?'were own goals':'was an own goal'} by an opponent, credited to nobody. `:''}
+      ${t.og_against?`${t.name}'s own players put ${t.og_against>1?t.og_against+' past':'one past'} their own keeper.`:''}</p>`;
+  }
+
+  const hist = t.debutant
+    ? `<p class="hist"><b>First appearance.</b><span class="debut">Debut</span><br>
+       One of ${DEBUTANTS.length} debutants the expanded field let in: ${DEBUTANTS.join(', ')}.</p>`
+    : `<p class="hist"><b>${t.apps}</b> World Cup${t.apps===1?'':'s'}, first in <b>${t.debut}</b>.<br>
+       Best finish before 2026: <b>${t.best}</b>.</p>`;
+
+  cbody.innerHTML = `
+    <p class="ccode">${t.code}</p>
+    <h2 class="cname">${t.name}</h2>
+    <p class="cmeta">Group ${t.group} &middot; ${t.conf}</p>
+    <div class="verdict ${out?'out':''}">${vtxt}</div>
+    <div class="grid3">
+      <div class="cell"><div class="n">${t.w}–${t.d}–${t.l}</div><div class="k">W–D–L</div></div>
+      <div class="cell"><div class="n">${t.gd>0?'+':''}${t.gd}</div><div class="k">Goal difference</div></div>
+      <div class="cell"><div class="n">${t.cs}<span style="color:var(--dim)">/${t.pld}</span></div><div class="k">Clean sheets</div></div>
+    </div>
+    ${next.length?`<h3>Next</h3>${nextRows}`:''}
+    <h3>Results</h3>${rows}
+    <h3>Who scored</h3>${scorers}
+    <h3>Before 2026</h3>${hist}
+    <p class="src">Match data &amp; scorers: openfootball/worldcup.json (public domain).<br>
+      Ranking: FIFA/Coca-Cola Men's World Ranking, 11 June 2026 — the last release before kick-off.<br>
+      History: Wikipedia, national team appearances. Flags: lipis/flag-icons.<br>
+      Shoot-outs count as draws, per statistical convention. Own goals are excluded from scorer totals.</p>`;
+  card.classList.add('on');
+}
+function deselect(){ selected=-1; card.classList.remove('on'); paint(); }
+document.getElementById('close').addEventListener('click',deselect);
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!document.getElementById('boot').hidden) closeBoot(); else deselect();
+});
+
+/* ---------- golden boot ---------- */
+const BOOT = DATA.boot;
+const leaders = BOOT.filter(r=>r.g===BOOT[0].g);
+document.getElementById('bootN').innerHTML = leaders.length===1
+  ? `${leaders[0].s}<span class="g"> ${leaders[0].g}</span>`
+  : `${leaders.length} tied<span class="g"> ${BOOT[0].g}</span>`;
+
+/* Take ten, then keep anyone level with tenth — the cut moves as goals go in. */
+const cut = BOOT[Math.min(9, BOOT.length-1)].g;
+const shortlist = BOOT.filter(r=>r.g>=cut);
+
+let pos=0, prevG=null;
+document.getElementById('bootRows').innerHTML = shortlist.map((r,idx)=>{
+  if(r.g!==prevG){ pos=idx+1; prevG=r.g; }
+  const tied = shortlist.filter(x=>x.g===r.g).length>1;
+  return `<div class="br ${r.g===BOOT[0].g?'lead':''}">
+    <span class="pos">${tied?'=':''}${pos}</span>
+    <img src="data:image/png;base64,${FLAGS[r.c]}" alt="" width="24" height="18">
+    <span class="cd">${r.c}</span>
+    <span class="nm">${r.n}${r.pens?`<small>${r.pens} from the penalty spot</small>`:''}</span>
+    <span class="gl">${r.g}</span></div>`;
+}).join('');
+
+document.getElementById('bootSub').textContent =
+  `${shortlist.length} players · through ${DATA.generated.slice(5).replace('-','/')}`;
+document.getElementById('bootNote').innerHTML =
+  `Own goals and shoot-out penalties are excluded, as FIFA excludes them.<br>
+   FIFA settles a tie on assists, then minutes played — neither is in this dataset, so ties are shown level.`;
+
+const bootEl = document.getElementById('boot'), scrim = document.getElementById('scrim');
+let lastFocus=null;
+function openBoot(){
+  lastFocus=document.activeElement;
+  bootEl.hidden=false; scrim.hidden=false;
+  document.getElementById('bootClose').focus();
+}
+function closeBoot(){
+  bootEl.hidden=true; scrim.hidden=true;
+  if(lastFocus) lastFocus.focus();
+}
+document.getElementById('bootBtn').addEventListener('click',openBoot);
+document.getElementById('bootClose').addEventListener('click',closeBoot);
+scrim.addEventListener('click',closeBoot);
+
+const WORDS=['None','One','Two','Three','Four','Five','Six','Seven','Eight'];
+const nLit = TEAMS.filter(t=>t.lit).length;
+document.getElementById('litN').textContent =
+  nLit===1 ? 'One is' : (WORDS[nLit]||nLit)+' are';
+
+paint(); drawLegend(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
