@@ -27,7 +27,7 @@ Arabia, Qatar, Tunisia, Turkey, Curaçao — have no panel. They're still fully 
 and their cards say so. `refresh.py` asserts 42 panels and 12 pentagons and refuses to
 build otherwise, so if a group winner ever lands on the no-panel list the build fails loudly.
 
-Live: _(add your Vercel URL here)_
+Live: https://ball-goes-dark.vercel.app/
 
 ## What's in here
 
