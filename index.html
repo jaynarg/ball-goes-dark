@@ -470,7 +470,7 @@ const sprites = PANELS.map(t=>{
 const stage = document.getElementById('stage');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
-camera.position.set(0,0,3.35);
+camera.position.set(0,0,0);   // fitCamera() sets z on first resize
 const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
 renderer.setPixelRatio(DPR);
 stage.appendChild(renderer.domElement);
@@ -482,14 +482,66 @@ const rim = new THREE.DirectionalLight(0x6FA8C8, .75); rim.position.set(4,-1.6,-
 
 const inner = new THREE.Mesh(new THREE.SphereGeometry(R*.955,64,48),
   new THREE.MeshBasicMaterial({color:0x05080B}));
-scene.add(inner);
-scene.add(ball);
+
+/* inner sphere + panels ride together so the whole ball can be nudged off-center
+   into whatever band of the screen the chrome leaves free */
+const world = new THREE.Group();
+world.add(inner); world.add(ball);
+scene.add(world);
+
+/* ---------- fit the ball to the space the chrome leaves ----------
+   A fixed camera distance means the sphere's projected size tracks viewport
+   height, so on a tall phone it swallows the masthead. Solve for the distance
+   that puts the ball inside the free band instead, and re-solve on resize. */
+const RB = 1.08;                       // ball radius plus a thin margin
+let ZMIN = 2.2, ZMAX = 6, ZFIT = 3.4;
+
+function freeBand(){
+  const mobile = innerWidth < 900;
+  const h = document.getElementById('head').getBoundingClientRect();
+  const strip = document.getElementById('strip').getBoundingClientRect();
+  const finder = document.getElementById('finder').getBoundingClientRect();
+  if(mobile){
+    const top = h.bottom + 14;
+    const bottom = Math.min(finder.top, strip.top) - 14;
+    return {top, bottom, width: innerWidth * 0.95};
+  }
+  return {top: 8, bottom: strip.top - 12, width: Math.max(340, innerWidth - 620)};
+}
+
+function fitCamera(){
+  const b = freeBand();
+  const availH = Math.max(140, b.bottom - b.top);
+  const t = Math.tan(camera.fov * Math.PI / 360);      // tan(fov/2)
+  const dH = RB * innerHeight / (availH * t);
+  const dW = RB * innerWidth / (b.width * t * camera.aspect);
+  ZFIT = Math.max(dH, dW);
+  ZMIN = ZFIT * 0.62;
+  ZMAX = ZFIT * 1.9;
+
+  /* recenter: shift the ball into the middle of the free band */
+  const midPx = (b.top + b.bottom) / 2;
+  const worldPerPx = 2 * ZFIT * t / innerHeight;
+  world.position.y = (innerHeight / 2 - midPx) * worldPerPx;
+  return ZFIT;
+}
+
+const clampZ = z => Math.min(ZMAX, Math.max(ZMIN, z));
+/* zoom steps scale with the fit distance, normalised so they feel the same at
+   any viewport (3.4 is roughly the desktop fit these constants were tuned at) */
+const zoomStep = () => ZFIT / 3.4;
 
 function resize(){
   const w=innerWidth,h=innerHeight;
   camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h);
+  const before = ZFIT;
+  const z = fitCamera();
+  /* preserve the user's zoom ratio across a resize; snap to fit on first run */
+  camera.position.z = camera.position.z ? clampZ(camera.position.z * z / before) : z;
 }
-addEventListener('resize',resize); resize();
+addEventListener('resize',resize);
+camera.position.z = 0;                 // falsy: makes the first resize() adopt the fit
+resize();
 
 /* ---------- orientation: quaternion arcball ---------- */
 const q = new THREE.Quaternion();
@@ -533,7 +585,7 @@ cv.addEventListener('pointerup', e=>{
 cv.addEventListener('pointerleave', ()=>{ hideTip(); });
 cv.addEventListener('wheel', e=>{
   e.preventDefault();
-  camera.position.z = Math.min(5.4, Math.max(2.25, camera.position.z + e.deltaY*0.0016));
+  camera.position.z = clampZ(camera.position.z + e.deltaY*0.0016*zoomStep());
 },{passive:false});
 
 /* pinch */
@@ -543,7 +595,7 @@ cv.addEventListener('touchmove', e=>{
   touches=e.touches.length;
   if(e.touches.length===2){
     const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-    if(pinch) camera.position.z = Math.min(5.4, Math.max(2.25, camera.position.z - (d-pinch)*0.006));
+    if(pinch) camera.position.z = clampZ(camera.position.z - (d-pinch)*0.006*zoomStep());
     pinch=d;
   }
 },{passive:true});
