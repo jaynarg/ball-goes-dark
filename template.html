@@ -296,7 +296,7 @@ const PHI = (1+Math.sqrt(5))/2;
 const R = 1.0;
 
 /* ---------- palette (must mirror the CSS custom properties) ---------- */
-const STAGE_COL = ['#232C35','#3C5364','#7BA0B5','#F0B429','#F9802B','#E8483A','#FFD84D'];
+const STAGE_COL = ['#232C35','#3C5364','#7BA0B5','#38B2A3','#F9802B','#E8483A','#FFD84D'];
 const STAGE_NAME = ['Group stage','Round of 32','Round of 16','Quarter-finals','Semi-finals','Runners-up','Champions'];
 const GROUPS = 'ABCDEFGHIJKL'.split('');
 const colorFor = t => STAGE_COL[t.stage];
@@ -402,13 +402,28 @@ function cellTriangles(cell, shrink, depth){
 const SHRINK = 0.070;
 const ball = new THREE.Group();
 const meshes = [];
-for(let i=0;i<N;i++){
-  const tris = cellTriangles(PANELS[i].cell, SHRINK, 3);
+
+/* Alive panels get a rim: a copy of the FULL cell (no shrink) sitting just under
+   the shell in bright gold. The shrunk panel on top covers all of it except the
+   7% seam, where the gold shows as an outline hugging the pentagon/hexagon edge.
+   Unlike the emissive glow this is a shape, not a brightness, so it survives a
+   still screenshot — and it no longer shares a hue with any base color. */
+const RIM_R = R * 0.985;
+const rims = [];
+const rimGroup = new THREE.Group();
+
+function cellPositions(cell, shrink, radius){
+  const tris = cellTriangles(cell, shrink, 3);
   const pos = new Float32Array(tris.length*9);
   let p=0;
   for(const f of tris) for(const v of f){
-    pos[p++]=v.x*R; pos[p++]=v.y*R; pos[p++]=v.z*R;
+    pos[p++]=v.x*radius; pos[p++]=v.y*radius; pos[p++]=v.z*radius;
   }
+  return pos;
+}
+
+for(let i=0;i<N;i++){
+  const pos = cellPositions(PANELS[i].cell, SHRINK, R);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   g.setAttribute('normal', new THREE.BufferAttribute(pos.slice(),3));   // unit sphere: pos == normal
@@ -417,6 +432,14 @@ for(let i=0;i<N;i++){
   const mesh = new THREE.Mesh(g,m);
   mesh.userData.i = i;
   ball.add(mesh); meshes.push(mesh);
+
+  const rg = new THREE.BufferGeometry();
+  rg.setAttribute('position', new THREE.BufferAttribute(cellPositions(PANELS[i].cell, 0.0, RIM_R),3));
+  const rmat = new THREE.MeshBasicMaterial({color:new THREE.Color(0xFFC233),
+    transparent:true, opacity:0, depthWrite:false});
+  const rim = new THREE.Mesh(rg, rmat);
+  rim.visible = false;
+  rims.push(rim); rimGroup.add(rim);
 }
 
 /* ---------- labels: flag over three-letter code ---------- */
@@ -492,6 +515,7 @@ const inner = new THREE.Mesh(new THREE.SphereGeometry(R*.955,64,48),
 /* inner sphere + panels ride together so the whole ball can be nudged off-center
    into whatever band of the screen the chrome leaves free */
 const world = new THREE.Group();
+ball.add(rimGroup);
 world.add(inner); world.add(ball);
 scene.add(world);
 
@@ -640,6 +664,9 @@ function paint(){
     m.color.set(colorFor(t));
     m.emissive.set(t.lit ? (t.stage===6 ? 0x8A6400 : 0x5A3D00) : 0x000000);
     m.emissiveIntensity = t.lit ? 1 : 0;
+    rims[i].visible = t.lit;
+    rims[i].material.opacity = t.lit ? 1 : 0;
+    rims[i].material.color.set(t.stage===6 ? 0xFFE04D : 0xFFC233);
     if(i===selected){ m.emissive.set(0xffffff); m.emissiveIntensity=.20; }
     else if(i===hovered){ m.emissive.set(0xffffff); m.emissiveIntensity=.10; }
   }
@@ -670,8 +697,10 @@ function frame(now){
     w.copy(PANELS[i].centroid).applyQuaternion(q);
     const f = w.dot(camDir);
     sprites[i].material.opacity = Math.max(0, Math.min(1,(f-0.30)/0.30));
-    if(PANELS[i].lit && i!==selected && i!==hovered)
+    if(PANELS[i].lit && i!==selected && i!==hovered){
       meshes[i].material.emissiveIntensity = 0.72 + 0.28*Math.sin(pulse*1.6 + i);
+      rims[i].material.opacity = 0.80 + 0.20*Math.sin(pulse*1.6 + i);   // never below 0.8
+    }
   }
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
