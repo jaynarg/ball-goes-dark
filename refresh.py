@@ -165,11 +165,31 @@ for m in M:
             if g.get('penalty'): s['pens'] += 1
             s['mins'].append(minute(g))
 
+# "Alive" cannot mean "has an unplayed match": openfootball posts each knockout
+# round's fixtures only after the previous round finishes, so between the last QF
+# and the SF draw every QF winner would briefly look eliminated. Derive it from
+# results instead.
+#
+# The knockouts are under way once any bracket match has been played. From that
+# point a team is alive iff it has a knockout match AND did not lose its most
+# recent one (a shoot-out is a loss for whoever lost it, though the record shows a
+# draw). A team with no knockout match has been eliminated in the group stage.
+# Before the knockouts begin, everyone with an unfinished schedule is still alive.
+ko_started = any(x['ko'] > 0 and x['played'] for d in teams.values() for x in d['matches'])
+
 alive = set()
 for t, d in teams.items():
     d['matches'].sort(key=lambda x: x['date'])
-    if any(not x['played'] for x in d['matches']):
-        alive.add(t)
+    ko = [x for x in d['matches'] if x['ko'] > 0 and x['played']]
+    if not ko_started:
+        if any(not x['played'] for x in d['matches']):
+            alive.add(t)                   # group stage in progress
+    elif ko:
+        last = ko[-1]                      # their latest knockout result
+        lost = last['res'] == 'L' or (last['res'] == 'D' and not last.get('adv'))
+        if not lost:
+            alive.add(t)
+    # else: knockouts are on and this team never reached them -> eliminated
 
 # Once the final is played the champion is promoted to stage 6, so exactly one
 # panel stays lit on a dark ball. Until then, the eight survivors are lit.
@@ -285,3 +305,4 @@ print(f"  lit panels: {len(lit)} -> {', '.join(lit)}")
 print(f"  ball: {n_panel} panels = {n_pent} pentagons (group winners) + {n_panel-n_pent} hexagons")
 print(f"  no panel: {', '.join(sorted(NO_PANEL))}")
 print(f"wrote index.html ({(HERE / 'index.html').stat().st_size:,} bytes) + data/teams.json")
+print("run  node check.js  before committing")
