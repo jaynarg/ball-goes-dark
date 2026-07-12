@@ -200,9 +200,29 @@ for m in M:
         fin = p or et or ft
         champion = m['team1'] if fin[0] > fin[1] else m['team2']
 
+MAX_KO = max(KO_ORDER.values())          # a Final win would be ko=6
+
 for t, d in teams.items():
     played = [x for x in d['matches'] if x['played']]
-    d['stage'] = max([x['ko'] for x in d['matches']], default=0)
+
+    # Stage = how far a team GOT, which can't be read off its schedule: openfootball
+    # posts the next round's fixture only after the prior round ends, so a team that
+    # has just won its quarter-final has no semi-final row yet and would look stuck a
+    # round back. Derive it from results instead. Winning a knockout match at round r
+    # advances you to r+1; losing (or losing a shoot-out) leaves you at r. The most
+    # advanced round a team reached is the stage it earns.
+    reached = 0
+    for x in d['matches']:
+        if x['ko'] == 0 or not x['played']:
+            continue
+        won = x['res'] == 'W' or (x['res'] == 'D' and x.get('adv'))
+        # The third-place match is terminal: both teams are already semi-finalists,
+        # and winning it must not read as "reached the final".
+        if x['round'] == 'Match for third place':
+            reached = max(reached, x['ko'])
+        else:
+            reached = max(reached, min(x['ko'] + 1, MAX_KO) if won else x['ko'])
+    d['stage'] = reached
     if t == champion: d['stage'] = 6
     d['alive'] = t in alive
     d['lit'] = d['alive'] or d['stage'] == 6
