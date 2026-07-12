@@ -258,10 +258,10 @@
 <div id="tip" aria-hidden="true"></div>
 
 <div id="strip">
-  <div class="stat"><div class="n">96<span style="color:var(--dim)">/104</span></div><div class="k">Matches played</div></div>
-  <div class="stat"><div class="n">280</div><div class="k">Goals</div></div>
-  <div class="stat"><div class="n">169</div><div class="k">Different scorers</div></div>
-  <div class="stat"><div class="n">14</div><div class="k">Own goals</div></div>
+  <div class="stat"><div class="n"><span id="s_played">—</span><span style="color:var(--dim)">/104</span></div><div class="k">Matches played</div></div>
+  <div class="stat"><div class="n" id="s_goals">—</div><div class="k">Goals</div></div>
+  <div class="stat"><div class="n" id="s_scorers">—</div><div class="k">Different scorers</div></div>
+  <div class="stat"><div class="n" id="s_og">—</div><div class="k">Own goals</div></div>
   <button class="stat statbtn" id="bootBtn" aria-haspopup="dialog">
     <div class="n" id="bootN">—</div><div class="k">Golden Boot <i>&#9656;</i></div>
   </button>
@@ -881,6 +881,21 @@ document.getElementById('bootClose').addEventListener('click',closeBoot);
 scrim.addEventListener('click',closeBoot);
 
 document.getElementById('through').textContent = 'through ' + asOf;
+
+/* Strip counters are derived, never hardcoded — a stale literal here was the whole
+   reason "matches played" froze. Each match sits in two teams' lists, so halve. */
+{
+  const T = TEAMS;
+  const half = arr => arr.reduce((n,t)=>n+t, 0) / 2;
+  const played = Math.round(half(T.map(t => t.pld)));   // 104 total is fixed by the format
+  const goals   = T.reduce((n,t)=>n + t.gf, 0);
+  const scorers = T.reduce((n,t)=>n + t.n_scorers, 0);
+  const og      = T.reduce((n,t)=>n + t.og_for, 0);
+  document.getElementById('s_played').textContent  = played;
+  document.getElementById('s_goals').textContent   = goals;
+  document.getElementById('s_scorers').textContent = scorers;
+  document.getElementById('s_og').textContent      = og;
+}
 
 const WORDS=['None','One','Two','Three','Four','Five','Six','Seven','Eight'];
 const nLit = TEAMS.filter(t=>t.lit).length;
