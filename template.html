@@ -573,6 +573,22 @@ addEventListener('resize',resize);
 camera.position.z = 0;                 // falsy: makes the first resize() adopt the fit
 resize();
 
+/* First paint is a moving target on mobile: the web fonts swap in after the script
+   runs (changing the masthead's height) and the browser settles its viewport a beat
+   later (URL bar). Either one shifts the free band that fitCamera() measures, and the
+   ball can land centered against stale numbers — the "sitting too low until you
+   refresh" case. Re-fit after each of those settles, and observe the two elements
+   whose size defines the band so any late reflow corrects itself. */
+function refit(){ if(typeof resize === 'function') resize(); }
+addEventListener('load', refit);
+[0, 60, 180, 400].forEach(ms => setTimeout(refit, ms));   // catch viewport/URL-bar settle
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+if(window.ResizeObserver){
+  const ro = new ResizeObserver(refit);
+  ro.observe(document.getElementById('head'));
+  ro.observe(document.getElementById('finder'));
+}
+
 /* ---------- orientation: quaternion arcball ---------- */
 const q = new THREE.Quaternion();
 let vy=0, vx=0, dragging=false, target=null, tT=0, qFrom=new THREE.Quaternion(), qTo=new THREE.Quaternion();
