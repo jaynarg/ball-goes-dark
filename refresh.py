@@ -180,12 +180,20 @@ ko_started = any(x['ko'] > 0 and x['played'] for d in teams.values() for x in d[
 alive = set()
 for t, d in teams.items():
     d['matches'].sort(key=lambda x: x['date'])
-    ko = [x for x in d['matches'] if x['ko'] > 0 and x['played']]
+    # The third-place match is a consolation between two teams already knocked out in
+    # the semis, so it can never keep a team alive — nor should its result read as
+    # "latest knockout" (England winning it 6-4 does not put them back in). Exclude it
+    # from the aliveness test entirely: playing it at all means you're out.
+    ko = [x for x in d['matches']
+          if x['ko'] > 0 and x['played'] and x['round'] != 'Match for third place']
+    played_third = any(x['round'] == 'Match for third place' and x['played'] for x in d['matches'])
     if not ko_started:
         if any(not x['played'] for x in d['matches']):
             alive.add(t)                   # group stage in progress
+    elif played_third:
+        pass                               # semi loser -> eliminated regardless of result
     elif ko:
-        last = ko[-1]                      # their latest knockout result
+        last = ko[-1]                      # their latest real knockout result
         lost = last['res'] == 'L' or (last['res'] == 'D' and not last.get('adv'))
         if not lost:
             alive.add(t)
@@ -228,6 +236,21 @@ for t, d in teams.items():
     d['lit'] = d['alive'] or d['stage'] == 6
     d['stage_label'] = STAGE_LABEL[d['stage']]
     d['pld'] = len(played)
+
+    # Final placement, when a team reached a medal match. This is distinct from
+    # stage/colour (how deep the bracket run went): the semi losers are both
+    # "Semi-finals" by round, but one takes bronze and one comes fourth, and the
+    # final's loser is runner-up, not simply "out in the final".
+    placed = None
+    for x in d['matches']:
+        if not x['played']:
+            continue
+        won = x['res'] == 'W' or (x['res'] == 'D' and x.get('adv'))
+        if x['round'] == 'Final':
+            placed = 'Champions' if won else 'Runners-up'
+        elif x['round'] == 'Match for third place':
+            placed = 'Third place' if won else 'Fourth place'
+    d['placed'] = placed
     d['cs'] = sum(1 for x in played if x['ga'] == 0)
     d['gd'] = d['gf'] - d['ga']
     sc = sorted(d['scorers'].items(), key=lambda kv: (-kv[1]['g'], kv[0]))

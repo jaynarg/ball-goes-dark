@@ -298,6 +298,7 @@ const R = 1.0;
 /* ---------- palette (must mirror the CSS custom properties) ---------- */
 const STAGE_COL = ['#232C35','#3C5364','#7BA0B5','#38B2A3','#F9802B','#E8483A','#FFD84D'];
 const STAGE_NAME = ['Group stage','Round of 32','Round of 16','Quarter-finals','Semi-finals','Runners-up','Champions'];
+const REACHED_ROUND = ['group stage','round of 32','round of 16','quarter-finals','semi-finals','final','final'];
 const GROUPS = 'ABCDEFGHIJKL'.split('');
 const colorFor = t => STAGE_COL[t.stage];
 
@@ -769,7 +770,14 @@ function verdictOf(t){
   if(t.stage===6)
     return [`<b>World champions.</b> Ranked <b>#${t.rank}</b> going in. The last panel still lit.`, false];
   if(t.alive)
-    return [`Still standing. Ranked <b>#${t.rank}</b> in the world going in; through to the <b>${st}</b>.`, false];
+    return [`Still standing. Ranked <b>#${t.rank}</b> in the world going in; through to the <b>${REACHED_ROUND[t.stage]}</b>.`, false];
+  // medal finishes read by placement, not by the round they last lost in
+  if(t.placed==='Runners-up')
+    return [`<b>Runners-up.</b> Ranked <b>#${t.rank}</b> going in. Went all the way to the final.`, true];
+  if(t.placed==='Third place')
+    return [`<b>Third place.</b> Ranked <b>#${t.rank}</b> going in. Won the third-place match.`, true];
+  if(t.placed==='Fourth place')
+    return [`<b>Fourth.</b> Ranked <b>#${t.rank}</b> going in. Lost the third-place match.`, true];
   if(t.debutant)
     return [`A first World Cup, ranked <b>#${t.rank}</b>. Out in the <b>${st}</b>.`, true];
   if(t.stage>0 && t.rank>=48)
